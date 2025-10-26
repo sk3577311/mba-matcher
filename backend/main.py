@@ -1,13 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes import router
-from models import create_db_and_tables
+from models import create_db_and_tables, seed_db
 
 app = FastAPI(title="Orbit AI - Matcher")
 
 origins = [
     "http://localhost:3000",
 ]
+
+# Create DB & tables
+create_db_and_tables()
+# Seed DB if empty
+seed_db()
 
 app.add_middleware(
     CORSMiddleware,
