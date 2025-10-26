@@ -38,7 +38,7 @@ export default function Home() {
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white">
       {/* Navbar */}
-      <nav className="flex items-center justify-between p-4 bg-gray-800 shadow-md">
+      <nav className="flex items-center justify-between p-4 bg-white text-black shadow-md">
         <div className="flex items-center gap-3">
           <div className="w-12 h-12">
             <Lottie animationData={require("../public/logo.json")} loop={true} />

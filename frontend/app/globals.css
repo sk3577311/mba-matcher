@@ -5,3 +5,14 @@
 
 html, body, #__next { height: 100%; }
 body { background-color: #f8fafc; }
+body {
+  @apply bg-gray-900 text-white font-sans;
+}
+
+a {
+  @apply text-white hover:text-indigo-400 transition-colors;
+}
+
+button {
+  @apply cursor-pointer;
+}
