@@ -9,7 +9,7 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
   const { setMatches } = useMatches();
-  const BaseUrl = "http://127.0.0.1:8000"
+  const BaseUrl = "https://mba-matcher.onrender.com/"
   const handleSubmit = async (e: any) => {
     e.preventDefault();
     setLoading(true);
