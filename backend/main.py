@@ -6,7 +6,7 @@ from models import create_db_and_tables, seed_db
 app = FastAPI(title="Orbit AI - Matcher")
 
 origins = [
-    "http://localhost:3000",
+    "https://mba-matcher-9awl.vercel.app/",
 ]
 
 # Create DB & tables
