@@ -13,50 +13,58 @@ def list_universities():
 
 
 def compute_match_score(req, u):
-    """Compute realistic admission probability."""
+    """Compute realistic admission probability safely for both MBA and MS."""
 
-    # --- Program-based weight configuration ---
-    if u.program_type.upper() == "MBA":
-        exam_score = req.gmat_score or 0
+    # --- Determine exam type ---
+    program = u.program_type.upper()
+
+    # Handle missing exam scores safely
+    gmat = req.gmat_score if hasattr(req, "gmat_score") and req.gmat_score else 0
+    gre = req.gre_score if hasattr(req, "gre_score") and req.gre_score else 0
+    gpa = req.gpa if hasattr(req, "gpa") else 0
+    work_exp = req.work_experience if hasattr(req, "work_experience") else 0
+
+    # --- MBA vs MS weighting ---
+    if program == "MBA":
+        exam_score = gmat or (gre * 0.214 + 200)  # convert GRE→GMAT equivalent if GRE used
         avg_exam = u.avg_gmat or 650
         w_exam, w_gpa, w_work = 0.5, 0.3, 0.2
-    else:
-        exam_score = req.gre_score or 0
+    else:  # MS or others
+        exam_score = gre or (gmat * 3.1 - 620)  # convert GMAT→GRE if GMAT used
         avg_exam = u.avg_gre or 320
         w_exam, w_gpa, w_work = 0.45, 0.45, 0.1
 
-    # --- Exam and GPA ratios ---
+    # --- Normalize values ---
     exam_ratio = exam_score / max(avg_exam, 1)
-    gpa_ratio = req.gpa / max(u.avg_gpa, 0.01)
+    gpa_ratio = gpa / max(u.avg_gpa, 0.01)
 
-    # Normalize to [0.5, 1.2]
-    exam_ratio = min(max(exam_ratio, 0.5), 1.2)
-    gpa_ratio = min(max(gpa_ratio, 0.5), 1.2)
+    # Clamp ratios
+    exam_ratio = min(max(exam_ratio, 0.4), 1.2)
+    gpa_ratio = min(max(gpa_ratio, 0.4), 1.2)
 
     # --- Work experience adjustment ---
-    if u.min_work_exp > 0:
-        work_ratio = min(req.work_experience / u.min_work_exp, 1.0)
-    else:
-        work_ratio = 1.0 if req.work_experience >= 0 else 0.8
+    work_ratio = 1.0
+    if u.min_work_exp and u.min_work_exp > 0:
+        work_ratio = min(work_exp / u.min_work_exp, 1.0)
 
-    # --- Base score ---
+    # --- Acceptance rate scaling ---
+    acc_factor = u.acceptance_rate / 100.0
+    acc_factor = min(max(acc_factor, 0.05), 0.6)
+
+    # --- Weighted score ---
     raw_score = (exam_ratio * w_exam) + (gpa_ratio * w_gpa) + (work_ratio * w_work)
+    adjusted = raw_score * (0.4 + acc_factor)
 
-    # --- Acceptance rate scaling (convert to 0–1 range) ---
-    acceptance_factor = u.acceptance_rate / 100
-    acceptance_factor = min(max(acceptance_factor, 0.05), 0.6)  # cap extremes
-
-    # --- Final probability ---
-    adjusted = raw_score * (0.4 + acceptance_factor)
+    # --- Final Probability ---
     probability = round(adjusted * 100, 1)
-
-    # Clamp to realistic range
     probability = max(20.0, min(probability, 95.0))
+
     return probability
 
 
 @router.post("/match")
 def match_universities(req: MatchRequest):
+    """Return ranked universities with realistic admission chances."""
     with Session(engine) as session:
         unis = session.exec(
             select(University).where(University.program_type == req.program_type)
@@ -67,7 +75,12 @@ def match_universities(req: MatchRequest):
 
         results = []
         for u in unis:
-            prob = compute_match_score(req, u)
+            try:
+                prob = compute_match_score(req, u)
+            except Exception as e:
+                print(f"⚠️ Error computing score for {u.name}: {e}")
+                prob = 50.0  # fallback value
+
             results.append({
                 "name": u.name,
                 "country": u.country,
@@ -84,6 +97,7 @@ def match_universities(req: MatchRequest):
 
 @router.post("/match/top")
 def match_top_university(req: MatchRequest):
+    """Return the single best-fit university."""
     with Session(engine) as session:
         unis = session.exec(
             select(University).where(University.program_type == req.program_type)
