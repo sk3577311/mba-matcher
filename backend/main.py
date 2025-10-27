@@ -7,8 +7,7 @@ app = FastAPI(title="Orbit AI - Matcher")
 
 # ✅ Allow only trusted frontend origins
 origins = [
-    "https://mba-matcher-9awl.vercel.app",
-    "http://localhost:3000",  # for local testing
+    "https://mba-matcher.vercel.app/",
 ]
 
 # ✅ Proper CORS setup
